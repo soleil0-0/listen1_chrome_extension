@@ -377,7 +377,8 @@ const main = () => {
           $scope.dialog_type = 4;
         }
         if (dialog_type === 5) {
-          $scope.dialog_title = $translate.instant('_OPEN_PLAYLIST');
+          $scope.dialog_title = $translate.instant('_OPEN_PLAYLIST') +
+                                '/' + $translate.instant('_CREATE_PLAYLIST');
           $scope.dialog_type = 5;
         }
         if (dialog_type === 6) {
@@ -736,6 +737,7 @@ const main = () => {
       });
 
       $scope.openUrl = (url) => {
+        $scope.newlist_title = url;
         loWeb.post({
           url: '/parse_url',
           method: 'POST',
@@ -750,7 +752,8 @@ const main = () => {
           if (result !== undefined) {
             $scope.showPlaylist(result.id);
           } else {
-            Notification.info($translate.instant('_FAIL_OPEN_PLAYLIST_URL'));
+            $scope.createAndAddPlaylist();
+            //Notification.info($translate.instant('_FAIL_OPEN_PLAYLIST_URL'));
           }
         });
       };
@@ -909,8 +912,10 @@ const main = () => {
           // default on
           $scope.enableAutoChooseSource = true;
         }
+        $scope.enableMiniPlayer = localStorage.getObject('enable_mini_player');
         $scope.applyGlobalShortcut();
         $scope.openLyricFloatingWindow();
+        $scope.toggleMiniPlayer($scope.enableMiniPlayer);
       };
 
       $scope.saveLocalSettings = () => {
@@ -1190,18 +1195,22 @@ const main = () => {
         }
       });
 
+      function togglePlayPause() {
+        if (angularPlayer.isPlayingStatus()) {
+          // if playing then pause
+          angularPlayer.pause();
+        } else {
+          // else play if not playing
+          angularPlayer.play();
+        }
+      }
+
       // define keybind
       hotkeys.add({
         combo: 'p',
         description: '播放/暂停',
         callback() {
-          if (angularPlayer.isPlayingStatus()) {
-            // if playing then pause
-            angularPlayer.pause();
-          } else {
-            // else play if not playing
-            angularPlayer.play();
-          }
+          togglePlayPause();
         },
       });
 
@@ -1306,6 +1315,24 @@ const main = () => {
         ipcRenderer.send('control', message);
       };
 
+      $scope.toggleMiniPlayer = (toggle) => {
+        if (typeof chrome !== 'undefined') {
+          return;
+        }
+        let message = '';
+        if (toggle === true) {
+          $scope.enableMiniPlayer = !$scope.enableMiniPlayer;
+        }
+        if ($scope.enableMiniPlayer === true) {
+          message = 'enable_mini_player';
+        } else {
+          message = 'disable_mini_player';
+        }
+        localStorage.setObject('enable_mini_player', $scope.enableMiniPlayer);
+        const { ipcRenderer } = require('electron');
+        ipcRenderer.send('control', message);
+      };
+
       if (typeof chrome === 'undefined') {
         require('electron').ipcRenderer.on('globalShortcut', (event, message) => {
           if (message === 'right') {
@@ -1330,6 +1357,23 @@ const main = () => {
         }
         localStorage.setObject('enable_auto_choose_source', $scope.enableAutoChooseSource);
       };
+      if (typeof chrome === 'undefined') {
+        require('electron').ipcRenderer.on('togglePlayPause', (event, message) => {
+          togglePlayPause();
+        });
+      }
+
+      if (typeof chrome === 'undefined') {
+        require('electron').ipcRenderer.on('prevTrack', (event, message) => {
+          angularPlayer.prevTrack();
+        });
+      }
+
+      if (typeof chrome === 'undefined') {
+        require('electron').ipcRenderer.on('nextTrack', (event, message) => {
+          angularPlayer.nextTrack();
+        });
+      }
     },
   ]);
 
