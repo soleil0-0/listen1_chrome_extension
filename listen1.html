@@ -105,7 +105,7 @@
                 <label>{{_PLAYLIST_LINK}}/{{_PLAYLIST_TITLE}}</label>
                 <input class="form-control" type="text" placeholder="{{_EXAMPLE}}http://www.xiami.com/collect/198267231" ng-model="dialog_url" />
               </div>
-              <button class="btn btn-primary confirm-button" ng-click="openUrl(dialog_url);closeDialog();dialog_url='';">{{_COMFIRM}}</button>
+              <button class="btn btn-primary confirm-button" ng-click="openOrCreatePlaylist(dialog_url);closeDialog();dialog_url='';">{{_COMFIRM}}</button>
               <button class="btn btn-default" ng-click="closeDialog()">{{_CANCEL}}</button>
             </div>
             <ul class="dialog-merge-playlist" ng-show="dialog_type==6">

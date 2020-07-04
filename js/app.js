@@ -735,9 +735,20 @@ const main = () => {
           }, 0);
         },
       });
-
-      $scope.openUrl = (url) => {
-        $scope.newlist_title = url;
+      function isUrl(s){
+        // regex from stackoverflow
+        // https://stackoverflow.com/questions/3809401/what-is-a-good-regular-expression-to-match-a-url
+        var expression = /(https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|www\.[a-zA-Z0-9][a-zA-Z0-9-]+[a-zA-Z0-9]\.[^\s]{2,}|https?:\/\/(?:www\.|(?!www))[a-zA-Z0-9]+\.[^\s]{2,}|www\.[a-zA-Z0-9]+\.[^\s]{2,})/gi;
+        var regex = new RegExp(expression);
+        return s.match(regex) !== null;
+      }
+      $scope.openOrCreatePlaylist = (userInput) => {
+        if(!isUrl(userInput)){
+          $scope.newlist_title = userInput;
+          $scope.createAndAddPlaylist();
+          return;
+        }
+        var url = userInput;
         loWeb.post({
           url: '/parse_url',
           method: 'POST',
@@ -752,8 +763,7 @@ const main = () => {
           if (result !== undefined) {
             $scope.showPlaylist(result.id);
           } else {
-            $scope.createAndAddPlaylist();
-            //Notification.info($translate.instant('_FAIL_OPEN_PLAYLIST_URL'));
+            Notification.info($translate.instant('_FAIL_OPEN_PLAYLIST_URL'));
           }
         });
       };
