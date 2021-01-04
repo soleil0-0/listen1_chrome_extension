@@ -57,6 +57,14 @@
             "js": [
                 "js/oauth_callback.js"
             ]
+        },
+        {
+            "matches": [
+                "https://dicmusic.club/torrents.php?id=*", "https://dicmusic.club/torrents.php?torrentid=*",
+                "https://redacted.ch/torrents.php?id=*", "https://redacted.ch/torrents.php?torrentid=*"
+            ],
+            "js": ["js/dicmusic.js"],
+            "run_at": "document_end"
         }
     ]
 }

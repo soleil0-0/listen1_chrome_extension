@@ -117,14 +117,90 @@ catch (err) {
   }, ['requestHeaders', 'blocking']);
 }
 
+let lastKeyword = "";
+function goToURL(targetURL) {
+  return new Promise(resolve => {
+    chrome.tabs.query({}, function(tabs) {
+      for (let i = 0, tab; tab = tabs[i]; i++) {
+          if (tab.url === targetURL) {
+              chrome.tabs.update(tab.id, {active: true});
+              resolve(tab);
+              return;
+          }
+      }
+      chrome.tabs.create({url: targetURL}, async tab => {
+        chrome.tabs.onUpdated.addListener(function listener (tabId, info) {
+          if (info.status === 'complete' && tabId === tab.id) {
+              chrome.tabs.onUpdated.removeListener(listener);
+              lastKeyword = "";
+              resolve(tab);
+          }
+        });
+      });
+    });
+  });
+}
 /**
- * Get tokens.
+ * listen message.
  */
+chrome.runtime.onMessage.addListener(async (request, sender, sendResponse) => {
+  switch (request.type) {
+    case "code":
+      const code = request.query.split("=")[1];
+      Github.handleCallback(code);
+      sendResponse();
+      break;
+    case "play":
+      // parse artist and album
+      const artist = request.query.split("|")[0].replace(/\(.*\)/, "");
+      const album = request.query.split("|")[1];
 
-chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  const code = request.query.split('=')[1];
-  Github.handleCallback(code);
-  sendResponse();
+      // open extension ui
+      await goToURL(chrome.extension.getURL('listen1.html'));
+
+      // type content to input
+      const [viewWindow] = chrome.extension.getViews().filter(p => p.location.href.endsWith('listen1.html'));
+      const searchInput = viewWindow.document.querySelector('#search-input');
+      keyword = artist + " " + album;
+      if (keyword === lastKeyword) {
+        sendResponse();
+        return;
+      }
+      searchInput.value = keyword;
+      lastKeyword = keyword;
+
+      // change source
+      const allMusic = viewWindow.document.querySelector(".searchbox .source-list .source-button:first-child");
+      if (!allMusic.classList.contains('active')) allMusic.click();
+
+      // remove last search result
+      const results = viewWindow.document.querySelector(".detail-songlist").children;
+      if (results) Array.from(results).forEach((value, index) => { if (index !== 0) value.remove(); });
+
+      // trigger ng-model change to make search happen
+      const $searchInput = viewWindow.angular.element(searchInput);
+      $searchInput.triggerHandler('input');
+
+      // wait search content appear, and play first song
+      let timeout = 3 * 60 * 1000;
+      const playFirstSong = setInterval(function () {
+        const firstSong = viewWindow.document.querySelector('.detail-songlist .title a[add-and-play="song"]');
+        if (firstSong || timeout <= 0) {
+          firstSong.click();
+          // viewWindow.document.querySelector('.li-play')?.click();
+
+          clearInterval(playFirstSong);
+          sendResponse();
+          return;
+        }
+        timeout -= 500;
+      }, 500);
+
+
+      break;
+    default:
+      console.error("request type not support: " + request.type);
+  }
 });
 
 // at end of background.js
